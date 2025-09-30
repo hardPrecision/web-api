@@ -18,21 +18,43 @@ public class UsersController : Controller
         _userRepository = userRepository;
         _mapper = mapper;
     }
-
-    [HttpGet("{userId}")]
+    
+    [HttpGet("{userId}", Name = nameof(GetUserById))]
     [Produces("application/json", "application/xml")]
-    public ActionResult<UserDto> GetUserById([FromRoute] Guid userId)
+    public IActionResult GetUserById([FromRoute] Guid userId)
     {
         var user = _userRepository.FindById(userId);
         if (user == null) 
             return NotFound();
         
-        return new ActionResult<UserDto>(_mapper.Map<UserDto>(user));
+        return Ok(_mapper.Map<UserDto>(user));
     }
 
     [HttpPost]
-    public IActionResult CreateUser([FromBody] object user)
+    [Produces("application/json", "application/xml")]
+    public IActionResult CreateUser([FromBody] UserCreateDto user)
     {
-        throw new NotImplementedException();
+        if (user is null)
+        {
+            return BadRequest();
+        }
+        
+        if (!ModelState.IsValid)
+        {
+            return UnprocessableEntity(ModelState);
+        }
+
+        if (!user.Login.All(char.IsLetterOrDigit))
+        {
+            ModelState.AddModelError("Login", "Should contain only letters or digits");
+            return UnprocessableEntity(ModelState);
+        }
+        
+        var createdUser = _mapper.Map<UserEntity>(user);
+        var createdUserEntity = _userRepository.Insert(createdUser);
+        return CreatedAtRoute(
+            nameof(GetUserById),
+            new { userId = createdUserEntity.Id },
+            createdUserEntity.Id);
     }
 }
