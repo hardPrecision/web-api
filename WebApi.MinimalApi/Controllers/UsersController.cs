@@ -1,4 +1,5 @@
 using AutoMapper;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using WebApi.MinimalApi.Domain;
 using WebApi.MinimalApi.Models;
@@ -18,15 +19,15 @@ public class UsersController : Controller
         _userRepository = userRepository;
         _mapper = mapper;
     }
-    
+
     [HttpGet("{userId}", Name = nameof(GetUserById))]
     [Produces("application/json", "application/xml")]
     public IActionResult GetUserById([FromRoute] Guid userId)
     {
         var user = _userRepository.FindById(userId);
-        if (user == null) 
+        if (user == null)
             return NotFound();
-        
+
         return Ok(_mapper.Map<UserDto>(user));
     }
 
@@ -38,7 +39,7 @@ public class UsersController : Controller
         {
             return BadRequest();
         }
-        
+
         if (!ModelState.IsValid)
         {
             return UnprocessableEntity(ModelState);
@@ -49,7 +50,7 @@ public class UsersController : Controller
             ModelState.AddModelError("Login", "Should contain only letters or digits");
             return UnprocessableEntity(ModelState);
         }
-        
+
         var createdUser = _mapper.Map<UserEntity>(user);
         var createdUserEntity = _userRepository.Insert(createdUser);
         return CreatedAtRoute(
@@ -66,10 +67,12 @@ public class UsersController : Controller
         {
             return BadRequest();
         }
+
         if (userInfo.Login is null || userInfo.FirstName is null || userInfo.LastName is null)
         {
             return UnprocessableEntity(ModelState);
         }
+
         userInfo.Id = userId;
         var isInserted = false;
         var user = _mapper.Map<UserEntity>(userInfo);
@@ -77,14 +80,16 @@ public class UsersController : Controller
         {
             _userRepository.UpdateOrInsert(user, out isInserted);
         }
-        catch (Exception ex) 
+        catch (Exception ex)
         {
             return BadRequest();
         }
-        if (!ModelState.IsValid) 
+
+        if (!ModelState.IsValid)
         {
             return UnprocessableEntity(ModelState);
         }
+
         if (isInserted)
         {
             return CreatedAtRoute(
@@ -92,6 +97,40 @@ public class UsersController : Controller
                 new { userId = user.Id },
                 user.Id);
         }
+
+        return NoContent();
+    }
+
+    [HttpPatch("{userId}")]
+    [Produces("application/json", "application/xml")]
+    public IActionResult PartiallyUpdateUser([FromRoute] Guid userId, [FromBody] JsonPatchDocument<UserUpdateDto> patchDoc)
+    {
+        if (patchDoc is null)
+        {
+            return BadRequest();
+        }
+        
+        var userInfo = new  UserUpdateDto();
+        patchDoc.ApplyTo(userInfo, ModelState);
+        
+        userInfo.Id = userId;
+
+
+        if (_userRepository.FindById(userId) is null)
+        {
+            return NotFound();
+        }
+
+        
+        
+        TryValidateModel(userInfo);
+        if (!ModelState.IsValid)
+        {
+            return UnprocessableEntity(ModelState);
+        }
+        
+        _userRepository.Update(_mapper.Map<UserEntity>(userInfo));
+        
         return NoContent();
     }
 }
