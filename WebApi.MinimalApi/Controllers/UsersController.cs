@@ -189,10 +189,10 @@ public class UsersController : Controller
         {
             previousPageLink = previousPageLink,
             nextPageLink = nextPageLink,
-            totalCount = 10,
+            totalCount = pageList.TotalCount,
             pageSize = pageSizeInt,
             currentPage = pageNumberInt,
-            totalPages = 10
+            totalPages = pageList.TotalPages,
         };
         Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(paginationHeader));
         return Ok(users);
