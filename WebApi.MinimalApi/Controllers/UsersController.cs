@@ -197,4 +197,12 @@ public class UsersController : Controller
         Response.Headers.Add("X-Pagination", JsonConvert.SerializeObject(paginationHeader));
         return Ok(users);
     }
+    
+    [HttpOptions]
+    [Produces("application/json", "application/xml")]
+    public IActionResult Options()
+    {
+        Response.Headers.Add("Allow", "POST, GET, OPTIONS");
+        return Ok();
+    }
 }
