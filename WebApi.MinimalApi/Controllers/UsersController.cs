@@ -21,6 +21,7 @@ public class UsersController : Controller
     }
 
     [HttpGet("{userId}", Name = nameof(GetUserById))]
+    [HttpHead("{userId}")]
     [Produces("application/json", "application/xml")]
     public IActionResult GetUserById([FromRoute] Guid userId)
     {
@@ -28,6 +29,13 @@ public class UsersController : Controller
         if (user == null)
             return NotFound();
 
+        if (HttpMethods.IsHead(Request.Method))
+        {
+            var result = new OkResult();
+            Response.ContentType = "application/json; charset=utf-8";
+            return result;
+        }
+        
         return Ok(_mapper.Map<UserDto>(user));
     }
 
